@@ -5,7 +5,9 @@ import { io, Socket } from "socket.io-client";
 import { v4 as uuid } from "uuid";
 
 // 서버 주소 (Socket.IO 서버가 이 포트에서 돌아가야 함)
-const socket: Socket = io("http://localhost:4000");
+const socket: Socket = io("https://4000-0xmegg-chatmvp-fme2j3kpc2.app.codeanywhere.com/", {
+  transports: ["websocket"], // polling 대신 웹소켓 강제
+});
 
 interface Message {
   id: string;
@@ -58,6 +60,32 @@ export default function ChatPage() {
     socket.emit("message", msg);
     setMessage("");
   };
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("✅ Socket connected!", socket.id);
+    });
+  
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err);
+    });
+  }, []);
+
+  useEffect(() => {
+    socket.on("init", (pastMessages: Message[]) => {
+      setMessages(pastMessages);
+    });
+  
+    socket.on("message", (msg: Message) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+  
+    return () => {
+      socket.off("init");
+      socket.off("message");
+    };
+  }, []);
+  
 
   return (
     <main className="flex flex-col h-screen max-w-2xl mx-auto p-4">
