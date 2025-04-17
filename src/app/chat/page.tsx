@@ -32,15 +32,6 @@ export default function ChatPage() {
     }
   }, []);
 
-  useEffect(() => {
-    socket.on("message", (msg: Message) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socket.off("message");
-    };
-  }, []);
 
   useEffect(() => {
     // 메시지 리스트 업데이트 시 스크롤 맨 아래로
@@ -72,15 +63,29 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    socket.on("connect", () => {
+      console.log("✅ Socket connected!", socket.id);
+    });
+  
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err);
+    });
+  
     socket.on("init", (pastMessages: Message[]) => {
       setMessages(pastMessages);
     });
   
     socket.on("message", (msg: Message) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === msg.id);
+        if (exists) return prev; // 중복 방지
+        return [...prev, msg];
+      });
     });
   
     return () => {
+      socket.off("connect");
+      socket.off("connect_error");
       socket.off("init");
       socket.off("message");
     };
@@ -92,17 +97,32 @@ export default function ChatPage() {
       <h2 className="text-xl font-bold mb-2">💬 채팅방 - {nickname}</h2>
 
       <div className="flex-1 overflow-y-auto border rounded p-2 mb-2 bg-white">
-        {messages.map((msg) => (
-          <div key={msg.id} className="mb-1">
-            <span className="font-semibold">{msg.sender}</span>:{" "}
-            <span>{msg.content}</span>
-            <span className="text-gray-400 text-sm ml-2">
-              {new Date(msg.timestamp).toLocaleTimeString()}
-            </span>
+  {messages.map((msg) => {
+    const isMine = msg.sender === nickname;
+
+    return (
+      <div
+        key={msg.id}
+        className={`flex mb-2 ${isMine ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className={`max-w-xs p-2 rounded-lg shadow text-sm ${
+            isMine
+              ? "bg-blue-500 text-white rounded-br-none"
+              : "bg-gray-200 text-black rounded-bl-none"
+          }`}
+        >
+          <div className="font-semibold">{msg.sender}</div>
+          <div>{msg.content}</div>
+          <div className="text-[10px] text-right mt-1 opacity-70">
+            {new Date(msg.timestamp).toLocaleTimeString()}
           </div>
-        ))}
-        <div ref={messageEndRef} />
+        </div>
       </div>
+    );
+  })}
+  <div ref={messageEndRef} />
+</div>
 
       <div className="flex gap-2">
         <input

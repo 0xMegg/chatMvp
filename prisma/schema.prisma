@@ -9,6 +9,7 @@ generator client {
 
 model Message {
   id        String   @id @default(uuid())
+  roomId    String   // ✅ 어떤 방의 메시지인지
   sender    String
   content   String
   timestamp DateTime @default(now())
